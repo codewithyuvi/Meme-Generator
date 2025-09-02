@@ -3,7 +3,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
-import Cards from "./Cards";
+import Cards from "./Cards"; 
 import EditMeme from "./EditMeme";
 
 export default function App() {

@@ -1,3 +1,4 @@
+// EditMeme.jsx - Gamified Meme Editor
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -8,6 +9,8 @@ import {
   Typography,
   TextField,
   CircularProgress,
+  Box,
+  Stack,
 } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -17,11 +20,10 @@ function EditMeme() {
   const location = useLocation();
   const meme = location.state;
 
-  // Expose Imgflip credentials openly as per request
-  const IMGFLIP_USERNAME = "YUVRAJBANSAL"; // replace if needed
-  const IMGFLIP_PASSWORD = "my@new#password"; // replace if needed
+  // Imgflip creds (dev only)
+  const IMGFLIP_USERNAME = "YUVRAJBANSAL";
+  const IMGFLIP_PASSWORD = "my@new#password";
 
-  // Initialize state for captions and preview URL
   const [captions, setCaptions] = useState(
     Array(meme?.box_count || 0).fill("")
   );
@@ -29,24 +31,21 @@ function EditMeme() {
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
 
-  // Handle missing meme
   if (!meme) {
     return (
-      <div style={{ padding: "2rem" }}>
+      <Box sx={{ p: 4 }}>
         <Typography variant="h6">No meme selected.</Typography>
         <Button onClick={() => navigate("/cards")}>Go Back</Button>
-      </div>
+      </Box>
     );
   }
 
-  // Update caption locally
   const handleCaptionChange = (index, value) => {
     const newCaptions = [...captions];
     newCaptions[index] = value;
     setCaptions(newCaptions);
   };
 
-  // Function to call Imgflip API directly for preview update
   const updatePreview = async (currentCaptions) => {
     if (!meme.id) return;
     setLoading(true);
@@ -61,27 +60,18 @@ function EditMeme() {
       const response = await axios.post(
         "https://api.imgflip.com/caption_image",
         params.toString(),
-        {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        }
+        { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
       );
-      const data = response.data;
-      if (data.success) {
-        setPreviewUrl(data.data.url);
-      } else {
-        console.error("Imgflip API error:", data);
+      if (response.data.success) {
+        setPreviewUrl(response.data.data.url);
       }
     } catch (error) {
-      console.error(
-        "Error calling Imgflip API:",
-        error.response?.data || error.message
-      );
+      console.error("Imgflip API error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Function to generate captions via Gemini API
   const generateAiCaptions = async () => {
     setAiLoading(true);
     try {
@@ -92,7 +82,7 @@ function EditMeme() {
           {
             parts: [
               {
-                text: `Generate a funny meme caption in hinglish with exactly ${meme.box_count} lines based on the meme template: ${meme.name}. Each line should be witty and match the typical style of this meme template. Return only the caption lines as plain text, without any extra explanation or formatting.`,
+                text: `Generate a funny meme caption in hinglish with exactly ${meme.box_count} lines for this template: ${meme.name}. Each line should be witty. Return only the lines.`,
               },
             ],
           },
@@ -106,16 +96,13 @@ function EditMeme() {
       const data = await res.json();
       const responseText =
         data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      // Split lines and trim, ensure length matches box_count
       const lines = responseText
         .split("\n")
         .map((line) => line.trim())
-        .filter((line) => line.length > 0)
+        .filter(Boolean)
         .slice(0, meme.box_count);
-      // If fewer lines, fill remaining with empty
       while (lines.length < meme.box_count) lines.push("");
       setCaptions(lines);
-      // Immediately update preview with new captions
       await updatePreview(lines);
     } catch (err) {
       console.error("Gemini API error:", err);
@@ -124,77 +111,120 @@ function EditMeme() {
     }
   };
 
-  // Effect: whenever captions change by typing, debounce and call updatePreview
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      updatePreview();
-    }, 500);
+    const timeout = setTimeout(() => updatePreview(), 500);
     return () => clearTimeout(timeout);
   }, [captions]);
 
   return (
-    <div
-      style={{
+    <Box
+      sx={{
         display: "flex",
+        flexDirection: { xs: "column", md: "row" },
         justifyContent: "space-between",
-        padding: "2rem",
+        alignItems: "flex-start",
+        gap: 4,
+        mt: { xs: "60px", md: "63px" },
+        px: { xs: 2, md: 6 },
+        py: 4,
         minHeight: "100vh",
+        background: `
+      radial-gradient(circle at top left, rgba(248, 199, 216, 0.15), transparent 60%),
+      radial-gradient(circle at bottom right, rgba(155, 223, 255, 0.15), transparent 60%),
+      linear-gradient(135deg, #c2c2c2ff 0%, #1a1a2e 100%)
+    `,
       }}
     >
-      {/* Meme Card on Left with live preview */}
-      <div style={{ flex: "1", display: "flex", justifyContent: "center" }}>
-        <Card
-          sx={{
-            width: 300,
-            height: 400,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <CardActions>
-            <Button size="small" onClick={() => navigate("/cards")}>
-              ← Back
-            </Button>
-          </CardActions>
-          <CardMedia
-            component="img"
-            image={previewUrl}
-            alt={meme.name}
-            style={{
-              maxWidth: "100%",
-              maxHeight: "100%",
-              objectFit: "contain",
-              flexGrow: 1,
+      {/* Meme Preview */}
+      <Card
+        sx={{
+          flex: 1,
+          maxWidth: 500,
+          borderRadius: 4,
+          background:
+            "linear-gradient(145deg, rgba(40,40,60,0.95), rgba(20,20,40,0.95))",
+          boxShadow: "0 4px 15px rgba(0,0,0,0.7), 0 0 15px rgba(255,64,129,0.4)",
+          color: "white",
+        }}
+      >
+        <CardActions sx={{ justifyContent: "space-between", px: 2 }}>
+          <Button
+            size="small"
+            onClick={() => navigate("/cards")}
+            sx={{
+              color: "#ff4081",
+              textTransform: "none",
+              fontWeight: "bold",
+              "&:hover": { textShadow: "0 0 10px rgba(255,64,129,0.8)" },
             }}
-          />
-          <Typography gutterBottom variant="h6">
+          >
+            ← Back
+          </Button>
+        </CardActions>
+        <CardMedia
+          component="img"
+          image={previewUrl}
+          alt={meme.name}
+          sx={{
+            objectFit: "contain",
+            maxHeight: 400,
+            px: 2,
+            pb: 2,
+          }}
+        />
+        <CardContent sx={{ textAlign: "center" }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: "bold",
+              color: "#ffeb3b",
+              textShadow: "0 0 6px rgba(255,235,59,0.7)",
+            }}
+          >
             {meme.name}
           </Typography>
-          <CardContent>
-            <Typography variant="body2">Box Count: {meme.box_count}</Typography>
-          </CardContent>
-        </Card>
-      </div>
+          <Typography variant="body2" sx={{ opacity: 0.8 }}>
+            Box Count: {meme.box_count}
+          </Typography>
+        </CardContent>
+      </Card>
 
-      {/* Input Section on Right */}
-      <div style={{ flex: "1", paddingLeft: "2rem" }}>
-        <Typography variant="h6">Edit Meme Captions</Typography>
-        <div style={{ marginTop: "1rem", marginBottom: "1rem" }}>
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={generateAiCaptions}
-            disabled={aiLoading}
-          >
-            {aiLoading ? <CircularProgress size={24} /> : "Generate by AI"}
-          </Button>
-        </div>
+      {/* Caption Editor */}
+      <Box flex={1}>
+        <Typography
+          variant="h5"
+          sx={{
+            fontFamily: "'Press Start 2P', cursive",
+            mb: 2,
+            color: "#00e676",
+            textShadow: "0 0 8px rgba(0,230,118,0.7)",
+          }}
+        >
+          ✍️ Edit Meme Captions
+        </Typography>
+
+        <Button
+          variant="contained"
+          onClick={generateAiCaptions}
+          disabled={aiLoading}
+          sx={{
+            mb: 3,
+            backgroundColor: "#ff4081",
+            fontWeight: "bold",
+            borderRadius: "20px",
+            "&:hover": { backgroundColor: "#f50057" },
+          }}
+        >
+          {aiLoading ? <CircularProgress size={24} color="inherit" /> : "✨ Generate by AI"}
+        </Button>
+
         {loading && (
-          <Typography variant="body2" color="textSecondary">
+          <Typography variant="body2" sx={{ color: "#aaa", mb: 2 }}>
             Updating preview...
           </Typography>
         )}
-        <div style={{ marginTop: "1rem" }}>
+
+        <Stack spacing={2}>
           {captions.map((text, index) => (
             <TextField
               key={index}
@@ -203,17 +233,30 @@ function EditMeme() {
               variant="filled"
               value={text}
               onChange={(e) => handleCaptionChange(index, e.target.value)}
-              style={{ backgroundColor: "#fdfd55", marginBottom: "1rem" }}
+              InputProps={{
+                style: {
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  color: "white",
+                },
+              }}
+              InputLabelProps={{
+                style: { color: "#aaa" },
+              }}
+              sx={{
+                "& .MuiFilledInput-root": {
+                  borderRadius: "12px",
+                  "&:hover": { backgroundColor: "rgba(255,255,255,0.15)" },
+                },
+              }}
             />
           ))}
-        </div>
-        
-        <p>
-          Sometimes, the website might rearrange the text boxes slightly. If
-          that happens, please adjust them manually.
-        </p>
-      </div>
-    </div>
+        </Stack>
+
+        <Typography variant="caption" sx={{ display: "block", mt: 3, opacity: 0.7 }}>
+          ⚠️ Sometimes Imgflip might shift the text boxes a bit — adjust manually if needed.
+        </Typography>
+      </Box>
+    </Box>
   );
 }
 
