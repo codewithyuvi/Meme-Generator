@@ -8,6 +8,7 @@ import InstagramIcon from "@mui/icons-material/Instagram";
 function Footer() {
   const year = new Date().getFullYear();
   return (
+<<<<<<< HEAD
     <Box
       component="footer"
       sx={{
@@ -101,6 +102,11 @@ function Footer() {
         Yuvraj Bansal &copy; {year} Memeify. Leveling up your meme game 🚀
       </Typography>
     </Box>
+=======
+    <footer>
+      <p>Yuvraj Bansal | Copyright ⓒ {year}</p>
+    </footer>
+>>>>>>> accb8cf1d07571212779ba9b35876b5ddd401568
   );
 }
 
